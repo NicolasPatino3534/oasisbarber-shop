@@ -33,6 +33,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 
@@ -110,4 +111,45 @@ export async function createAppointment(data) {
   });
 
   return { id: docId, ...data };
+}
+
+// ─── Admin: todos los turnos en tiempo real ───────────────────────────────────
+
+/**
+ * Suscripción en tiempo real a la colección completa de turnos.
+ * Ordena el resultado por fecha y horario en el cliente para evitar
+ * índices compuestos adicionales en Firestore.
+ *
+ * @param {Function} onUpdate  - Callback con array de turnos ordenados
+ * @param {Function} onError   - Callback de error
+ * @returns {Function}         - Función de cleanup para useEffect
+ */
+export function subscribeToAllAppointments(onUpdate, onError) {
+  return onSnapshot(
+    collection(db, COLLECTION),
+    (snapshot) => {
+      const data = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          return a.time.localeCompare(b.time);
+        });
+      onUpdate(data);
+    },
+    (error) => {
+      console.error('[Firestore] Error en listener de admin:', error);
+      onError?.(error);
+    },
+  );
+}
+
+// ─── Admin: eliminar turno ────────────────────────────────────────────────────
+
+/**
+ * Elimina un turno de Firestore por su ID de documento.
+ *
+ * @param {string} docId  - ID del documento a eliminar
+ */
+export async function deleteAppointment(docId) {
+  await deleteDoc(doc(db, COLLECTION, docId));
 }

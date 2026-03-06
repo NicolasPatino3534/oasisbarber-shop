@@ -1,4 +1,4 @@
-import { MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
+import { MONTH_LABELS, DAY_LABELS, BUSINESS_INFO } from '../../data/businessData.js';
 
 /**
  * Formatea 'YYYY-MM-DD' → "Martes, 10 de Marzo de 2025"
@@ -10,16 +10,28 @@ function formatDate(dateKey) {
   return `${DAY_LABELS[date.getUTCDay()]}, ${d} de ${MONTH_LABELS[m - 1]} de ${y}`;
 }
 
+function buildWhatsAppUrl(appointment) {
+  const { clientName, professionalName, serviceName, date, time } = appointment;
+  const msg =
+    `¡Hola! Soy ${clientName} y acabo de reservar un turno en Oasis Hair & Beard 💈\n\n` +
+    `👤 Profesional: ${professionalName}\n` +
+    `✂️ Servicio: ${serviceName}\n` +
+    `📅 Fecha: ${formatDate(date)}\n` +
+    `🕐 Horario: ${time} hs\n\n` +
+    `¡Hasta pronto!`;
+  return `https://wa.me/${BUSINESS_INFO.whatsappPhone}?text=${encodeURIComponent(msg)}`;
+}
+
 /**
  * Pantalla de éxito que se muestra luego de confirmar el turno.
- * Muestra los datos completos de la reserva guardada en localStorage
- * y permite hacer una nueva reserva.
+ * Muestra los datos completos de la reserva y un acceso directo a WhatsApp.
  */
 export default function StepSuccess({ appointment, onNewBooking }) {
   if (!appointment) return null;
 
   const [h] = appointment.time.split(':').map(Number);
   const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+  const whatsappUrl = buildWhatsAppUrl(appointment);
 
   return (
     <div className="step-enter flex flex-col items-center text-center py-4">
@@ -71,6 +83,20 @@ export default function StepSuccess({ appointment, onNewBooking }) {
       <p className="text-zinc-500 text-xs mb-6">
         El pago se realiza en el local. Por favor llegá 5 minutos antes.
       </p>
+
+      {/* Botón WhatsApp */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 mb-3 shadow-lg shadow-emerald-900/40"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 flex-shrink-0">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.553 4.116 1.52 5.847L.057 23.571a.75.75 0 00.908.94l5.944-1.559A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.98 0-3.831-.538-5.417-1.476l-.388-.232-4.02 1.054 1.022-3.93-.253-.403A9.944 9.944 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+        </svg>
+        Enviar confirmación por WhatsApp
+      </a>
 
       {/* Botón nueva reserva */}
       <button

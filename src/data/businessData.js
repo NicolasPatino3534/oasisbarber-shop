@@ -4,7 +4,10 @@ export const BUSINESS_INFO = {
   name: 'Oasis Hair & Beard',
   tagline: 'Estilo. Precisión. Confianza.',
   address: 'Av. del Centro 1234, Ciudad',
-  phone: '+54 11 2345-6789',
+  phone: '+54 351 548-3842',
+  // Formato wa.me: código de país + número sin espacios, guiones ni "+"
+  // ⚠️ Reemplazá con el número real de WhatsApp del negocio
+  whatsappPhone: '5493515483842',
   email: 'reservas@oasishair.com',
   hours: 'Lunes a Sábado: 10:00 – 19:00 hs',
 };
