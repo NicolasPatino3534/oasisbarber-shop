@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #09090b; }
+::-webkit-scrollbar-thumb { background: #d97706; border-radius: 3px; }
+
+/* Scroll suave global */
+html { scroll-behavior: smooth; }
+
+/* Selección de texto con color gold */
+::selection { background: #d97706; color: #fff; }
+
+@layer base {
+  body {
+    @apply bg-zinc-950 text-white font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gold { color: #f59e0b; }
+  .bg-gold  { background-color: #f59e0b; }
+
+  /* Animación de aparición para los pasos del wizard */
+  .step-enter {
+    animation: slideUp 0.35s ease-out both;
+  }
+}
