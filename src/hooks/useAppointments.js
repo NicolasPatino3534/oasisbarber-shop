@@ -1,116 +1,99 @@
-import { useCallback } from 'react';
+/**
+ * useAppointments.js
+ *
+ * Dos hooks que conectan la UI con el servicio de Firestore.
+ * Los componentes solo importan estos hooks — nunca tocan Firestore directamente.
+ */
 
-// Clave usada en localStorage para persistir todos los turnos
-const STORAGE_KEY = 'oasis_appointments';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  subscribeToBookedSlots,
+  createAppointment,
+} from '../services/appointmentsService.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook 1: Suscripción en tiempo real a los slots ocupados
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Hook personalizado que encapsula toda la lógica de persistencia de turnos.
- * Los datos se guardan en localStorage como un array JSON de objetos:
- * {
- *   id: string,           // ID único (timestamp)
- *   professionalId: string,
- *   professionalName: string,
- *   serviceId: string,
- *   serviceName: string,
- *   servicePrice: number,
- *   date: string,          // Formato 'YYYY-MM-DD'
- *   time: string,          // Formato 'HH:00'
- *   clientName: string,
- *   createdAt: string,     // ISO timestamp
- * }
+ * Retorna el Set de horarios ocupados para un profesional en una fecha,
+ * manteniéndose actualizado en tiempo real via Firestore onSnapshot.
+ *
+ * Cuando professionalId o date cambian, cancela la suscripción anterior
+ * y abre una nueva (limpieza automática en el return del useEffect).
+ *
+ * @param {string|null} professionalId
+ * @param {string|null} date - Formato 'YYYY-MM-DD'
+ * @returns {{ bookedSlots: Set<string>, loading: boolean, error: string|null }}
  */
-export function useAppointments() {
-  /**
-   * Lee y retorna todos los turnos almacenados en localStorage.
-   * Retorna un array vacío si no hay datos o si hay un error de parseo.
-   */
-  const getAppointments = useCallback(() => {
+export function useBookedSlots(professionalId, date) {
+  const [bookedSlots, setBookedSlots] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Si no hay profesional o fecha todavía, no hacemos nada
+    if (!professionalId || !date) {
+      setBookedSlots(new Set());
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    // Abre el listener en tiempo real; retorna la función de unsubscribe
+    const unsubscribe = subscribeToBookedSlots(
+      professionalId,
+      date,
+      (slots) => {
+        setBookedSlots(slots);
+        setLoading(false);
+      },
+      () => {
+        setError('No se pudieron cargar los horarios. Verificá tu conexión.');
+        setLoading(false);
+      },
+    );
+
+    // React llama a este return cuando el componente se desmonta
+    // o cuando professionalId/date cambian → cancela el listener anterior
+    return () => unsubscribe();
+  }, [professionalId, date]);
+
+  return { bookedSlots, loading, error };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook 2: Crear un turno con manejo de loading y error
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Provee una función `create` para guardar un turno en Firestore.
+ * Maneja los estados de carga y error para que la UI los muestre.
+ *
+ * @returns {{ create: Function, saving: boolean, saveError: string|null }}
+ */
+export function useCreateAppointment() {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+
+  const create = useCallback(async (appointmentData) => {
+    setSaving(true);
+    setSaveError(null);
+
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      // Si el JSON está corrupto, devolvemos array vacío para no bloquear la app
-      return [];
+      const result = await createAppointment(appointmentData);
+      return { success: true, appointment: result };
+    } catch (err) {
+      const message =
+        err.message || 'Error al guardar el turno. Intentá nuevamente.';
+      setSaveError(message);
+      return { success: false, error: message };
+    } finally {
+      setSaving(false);
     }
   }, []);
 
-  /**
-   * Devuelve true si el slot [professionalId + date + time] ya está reservado.
-   * Esta es la función clave para evitar la superposición de turnos.
-   */
-  const isSlotTaken = useCallback(
-    (professionalId, date, time) => {
-      const appointments = getAppointments();
-      return appointments.some(
-        (apt) =>
-          apt.professionalId === professionalId &&
-          apt.date === date &&
-          apt.time === time,
-      );
-    },
-    [getAppointments],
-  );
-
-  /**
-   * Retorna un Set con todos los horarios ya reservados para
-   * un profesional en una fecha determinada. Usado por StepTime.jsx
-   * para marcar slots como "Ocupados" en la UI.
-   */
-  const getBookedSlots = useCallback(
-    (professionalId, date) => {
-      const appointments = getAppointments();
-      const times = appointments
-        .filter((apt) => apt.professionalId === professionalId && apt.date === date)
-        .map((apt) => apt.time);
-      return new Set(times);
-    },
-    [getAppointments],
-  );
-
-  /**
-   * Persiste un nuevo turno en localStorage.
-   * Antes de guardar, realiza una comprobación final de conflictos
-   * (doble seguridad: la UI ya los evita, pero acá lo reforzamos).
-   *
-   * @param {object} appointment - Datos del turno a guardar
-   * @returns {{ success: boolean, appointment?: object, error?: string }}
-   */
-  const addAppointment = useCallback(
-    (appointment) => {
-      const appointments = getAppointments();
-
-      // Verificación final de conflicto antes de persistir
-      const conflict = isSlotTaken(
-        appointment.professionalId,
-        appointment.date,
-        appointment.time,
-      );
-
-      if (conflict) {
-        return {
-          success: false,
-          error: 'Este turno acaba de ser reservado por otra persona. Por favor, elegí otro horario.',
-        };
-      }
-
-      const newAppointment = {
-        ...appointment,
-        id: Date.now().toString(),    // ID único basado en timestamp
-        createdAt: new Date().toISOString(),
-      };
-
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify([...appointments, newAppointment]),
-        );
-        return { success: true, appointment: newAppointment };
-      } catch {
-        return { success: false, error: 'Error al guardar el turno. Intentá nuevamente.' };
-      }
-    },
-    [getAppointments, isSlotTaken],
-  );
-
-  return { getAppointments, isSlotTaken, getBookedSlots, addAppointment };
+  return { create, saving, saveError };
 }

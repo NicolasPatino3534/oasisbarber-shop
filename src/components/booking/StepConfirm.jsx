@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
 
-/**
- * Formatea 'YYYY-MM-DD' → "Lun, 10 de Marzo de 2025"
- */
 function formatDate(dateKey) {
   if (!dateKey) return '';
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -12,35 +9,45 @@ function formatDate(dateKey) {
 }
 
 /**
- * Paso 5: Resumen del turno + formulario para ingresar el nombre del cliente.
- * Al confirmar, se llama a onConfirm(clientName).
+ * Paso 5: Resumen del turno + formulario nombre del cliente.
+ *
+ * saving y saveError vienen de Booking.jsx (hook useCreateAppointment).
+ * Este componente no maneja la lógica async — solo llama onConfirm(nombre)
+ * y deja que el padre maneje el estado de la operación Firebase.
  */
-export default function StepConfirm({ professional, service, date, time, onConfirm, onBack }) {
+export default function StepConfirm({ professional, service, date, time, onConfirm, onBack, saving, saveError }) {
   const [clientName, setClientName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
-  // Hora de fin del turno
   const [h] = time ? time.split(':').map(Number) : [0];
   const endTime = `${String(h + 1).padStart(2, '0')}:00`;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const trimmed = clientName.trim();
+    const trimmedPhone = phone.trim();
+
     if (!trimmed) {
-      setError('Por favor, ingresá tu nombre para continuar.');
+      setValidationError('Por favor, ingresá tu nombre para continuar.');
       return;
     }
     if (trimmed.length < 2) {
-      setError('El nombre debe tener al menos 2 caracteres.');
+      setValidationError('El nombre debe tener al menos 2 caracteres.');
       return;
     }
-    setError('');
-    setLoading(true);
-    // Pequeña pausa para UX (simula latencia de red)
-    await new Promise((r) => setTimeout(r, 500));
-    onConfirm(trimmed);
-    setLoading(false);
+    if (!trimmedPhone) {
+      setPhoneError('Por favor, ingresá tu número de teléfono.');
+      return;
+    }
+    if (!/^[\d\s\+\-\(\)]{7,20}$/.test(trimmedPhone)) {
+      setPhoneError('Ingresá un número de teléfono válido.');
+      return;
+    }
+    setValidationError('');
+    setPhoneError('');
+    onConfirm(trimmed, trimmedPhone);
   };
 
   const summaryItems = [
@@ -61,10 +68,9 @@ export default function StepConfirm({ professional, service, date, time, onConfi
       <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl p-5 mb-6 space-y-3">
         {summaryItems.map((item) => (
           <div key={item.label} className="flex items-center gap-3">
-            {/* inline-flex necesario: text-center no opera sobre span con width fijo */}
             <span className="inline-flex items-center justify-center w-7 text-lg flex-shrink-0">{item.icon}</span>
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-xs text-zinc-500 uppercase tracking-wider w-20 flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-zinc-500 uppercase tracking-wider w-24 flex-shrink-0">
                 {item.label}
               </span>
               <span className="text-white font-semibold text-sm">{item.value}</span>
@@ -72,7 +78,6 @@ export default function StepConfirm({ professional, service, date, time, onConfi
           </div>
         ))}
 
-        {/* Línea total */}
         <div className="border-t border-zinc-700/50 pt-3 flex items-center justify-between">
           <span className="text-zinc-400 text-sm">Total a abonar en el local</span>
           <span className="text-amber-400 text-2xl font-black">${service?.price}</span>
@@ -89,40 +94,70 @@ export default function StepConfirm({ professional, service, date, time, onConfi
           value={clientName}
           onChange={(e) => {
             setClientName(e.target.value);
-            if (error) setError('');
+            if (validationError) setValidationError('');
           }}
           placeholder="Ej: Juan Pérez"
           maxLength={60}
-          className={`w-full bg-zinc-800 border rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 transition-all ${
-            error
+          disabled={saving}
+          className={`w-full bg-zinc-800 border rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-60 ${
+            validationError
               ? 'border-red-500/60 focus:ring-red-500/30'
               : 'border-zinc-700 focus:ring-amber-500/40 focus:border-amber-500/60'
           }`}
         />
-        {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+        {validationError && <p className="text-red-400 text-xs mt-2">{validationError}</p>}
 
-        {/* Botones */}
+        {/* Campo teléfono */}
+        <label className="block mt-4 mb-1.5">
+          <span className="text-sm font-medium text-zinc-300">Teléfono de contacto</span>
+        </label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => {
+            setPhone(e.target.value);
+            if (phoneError) setPhoneError('');
+          }}
+          placeholder="Ej: +54 11 2345-6789"
+          maxLength={25}
+          disabled={saving}
+          className={`w-full bg-zinc-800 border rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-60 ${
+            phoneError
+              ? 'border-red-500/60 focus:ring-red-500/30'
+              : 'border-zinc-700 focus:ring-amber-500/40 focus:border-amber-500/60'
+          }`}
+        />
+        {phoneError && <p className="text-red-400 text-xs mt-2">{phoneError}</p>}
+
+        {/* Error de Firestore (slot tomado en el último segundo, red caída, etc.) */}
+        {saveError && (
+          <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2">
+            <span className="text-red-400 flex-shrink-0">⚠️</span>
+            <p className="text-red-400 text-xs leading-relaxed">{saveError}</p>
+          </div>
+        )}
+
         <div className="flex gap-3 mt-6">
           <button
             type="button"
             onClick={onBack}
-            disabled={loading}
+            disabled={saving}
             className="flex-1 py-3 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-sm font-semibold transition-all disabled:opacity-50"
           >
             ← Volver
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={saving}
             className="flex-[2] py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
           >
-            {loading ? (
+            {saving ? (
               <>
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
-                Confirmando…
+                Guardando en Firestore…
               </>
             ) : (
               '✓ Confirmar Turno'

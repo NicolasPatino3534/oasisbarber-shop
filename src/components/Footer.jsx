@@ -39,12 +39,6 @@ export default function Footer() {
             <h4 className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-4">Horarios</h4>
             <p className="text-sm text-zinc-400">{BUSINESS_INFO.hours}</p>
             <p className="text-xs text-zinc-600 mt-1">Domingos: Cerrado</p>
-            <a
-              href="#reservar"
-              className="inline-block mt-4 text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              → Reservar turno online
-            </a>
           </div>
         </div>
 

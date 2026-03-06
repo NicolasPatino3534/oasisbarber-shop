@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAppointments } from '../../hooks/useAppointments.js';
+import { useCreateAppointment } from '../../hooks/useAppointments.js';
 import StepProfessional from './StepProfessional.jsx';
 import StepService from './StepService.jsx';
 import StepDate from './StepDate.jsx';
@@ -7,7 +7,6 @@ import StepTime from './StepTime.jsx';
 import StepConfirm from './StepConfirm.jsx';
 import StepSuccess from './StepSuccess.jsx';
 
-// ─── Configuración del wizard ─────────────────────────────────────────────────
 const STEPS = [
   { id: 1, label: 'Profesional' },
   { id: 2, label: 'Servicio'    },
@@ -16,53 +15,33 @@ const STEPS = [
   { id: 5, label: 'Confirmar'   },
 ];
 
-/**
- * Estado inicial vacío del wizard.
- * Lo definimos fuera del componente para poder reutilizarlo en "reset".
- */
 const INITIAL_STATE = {
   step: 1,
-  professional: null,   // objeto de PROFESSIONALS
-  service: null,        // objeto de SERVICES
-  date: null,           // string 'YYYY-MM-DD'
-  time: null,           // string 'HH:00'
-  confirmedAppointment: null, // objeto retornado por addAppointment() al confirmar
+  professional: null,
+  service: null,
+  date: null,
+  time: null,
+  confirmedAppointment: null,
 };
 
 /**
- * Componente principal del sistema de turnos.
+ * Orquestador del wizard de reservas.
  *
- * Maneja el flujo de 5 pasos:
- *   1 → Elegí profesional
- *   2 → Elegí servicio
- *   3 → Elegí fecha
- *   4 → Elegí horario  ← aquí se leen los slots ocupados desde localStorage
- *   5 → Confirmá (nombre del cliente)
- *   ✓ → Pantalla de éxito
+ * useCreateAppointment() provee:
+ *   - create(data)  → llama a Firestore con transacción atómica
+ *   - saving        → true mientras espera respuesta de Firestore
+ *   - saveError     → mensaje de error si Firestore rechaza la operación
  *
- * Regla crítica de conflictos:
- *   - useAppointments().getBookedSlots(professionalId, date) retorna los horarios
- *     ya ocupados para ese profesional en esa fecha, leyendo localStorage.
- *   - useAppointments().addAppointment() verifica conflictos antes de persistir.
+ * El spinner y el mensaje de error se pasan como props a StepConfirm.
  */
 export default function Booking() {
-  const { addAppointment } = useAppointments();
-
-  // Estado central del wizard
+  const { create, saving, saveError } = useCreateAppointment();
   const [state, setState] = useState(INITIAL_STATE);
 
-  // ── Navegación entre pasos ──────────────────────────────────────────────────
-
   const goToStep = useCallback((step) => setState((s) => ({ ...s, step })), []);
-
-  const goBack = useCallback(() => {
-    setState((s) => ({ ...s, step: Math.max(1, s.step - 1) }));
-  }, []);
-
-  // ── Handlers de selección (cada paso actualiza su dato y avanza) ────────────
+  const goBack   = useCallback(() => setState((s) => ({ ...s, step: Math.max(1, s.step - 1) })), []);
 
   const handleSelectProfessional = useCallback((professional) => {
-    // Al cambiar de profesional, reseteamos fecha/hora (pueden estar ocupadas)
     setState((s) => ({ ...s, professional, date: null, time: null, step: 2 }));
   }, []);
 
@@ -71,7 +50,6 @@ export default function Booking() {
   }, []);
 
   const handleSelectDate = useCallback((date) => {
-    // Al cambiar de fecha, reseteamos la hora seleccionada
     setState((s) => ({ ...s, date, time: null, step: 4 }));
   }, []);
 
@@ -80,18 +58,15 @@ export default function Booking() {
   }, []);
 
   /**
-   * Confirmación final:
-   * 1. Construye el objeto de turno.
-   * 2. Llama a addAppointment() que persiste en localStorage
-   *    (y verifica conflictos por segunda vez como salvaguarda).
-   * 3. Si hay conflicto (raro pero posible en multi-tab), muestra error.
-   * 4. Si todo OK, actualiza state con el turno confirmado.
+   * Llama al servicio de Firestore vía hook.
+   * Si hay conflicto (slot tomado), vuelve al paso de horario.
+   * Si hay error de red, saveError se muestra en StepConfirm.
    */
   const handleConfirm = useCallback(
-    async (clientName) => {
+    async (clientName, clientPhone) => {
       const { professional, service, date, time } = state;
 
-      const result = addAppointment({
+      const result = await create({
         professionalId:   professional.id,
         professionalName: professional.name,
         serviceId:        service.id,
@@ -101,32 +76,27 @@ export default function Booking() {
         date,
         time,
         clientName,
+        clientPhone,
       });
 
       if (!result.success) {
-        // Slot tomado en el último segundo (ej: doble tab abierto)
-        alert(`⚠️ ${result.error}\nSe recargará la pantalla para mostrar la disponibilidad actualizada.`);
-        // Volvemos al paso de horario para que elija otro slot
-        setState((s) => ({ ...s, time: null, step: 4 }));
+        // Si el slot fue tomado en el último segundo, volvemos a elegir horario
+        if (result.error?.includes('reservado')) {
+          setState((s) => ({ ...s, time: null, step: 4 }));
+        }
+        // saveError ya está seteado en el hook → StepConfirm lo muestra
         return;
       }
 
-      // Turno guardado exitosamente
       setState((s) => ({ ...s, confirmedAppointment: result.appointment, step: 6 }));
     },
-    [state, addAppointment],
+    [state, create],
   );
 
-  /** Resetea el wizard para hacer una nueva reserva */
-  const handleNewBooking = useCallback(() => {
-    setState(INITIAL_STATE);
-  }, []);
-
-  // ── Renderizado ─────────────────────────────────────────────────────────────
+  const handleNewBooking = useCallback(() => setState(INITIAL_STATE), []);
 
   const { step, professional, service, date, time, confirmedAppointment } = state;
 
-  // Determina hasta qué paso se puede navegar libremente (solo pasos completados)
   const canNavigateTo = (targetStep) => {
     if (targetStep === 1) return true;
     if (targetStep === 2) return !!professional;
@@ -139,7 +109,6 @@ export default function Booking() {
   return (
     <section id="reservar" className="py-24 px-4 bg-zinc-900">
       <div className="max-w-2xl mx-auto">
-        {/* Header de sección */}
         <div className="text-center mb-12">
           <p className="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-3">
             Sistema de turnos online
@@ -152,10 +121,9 @@ export default function Booking() {
           </p>
         </div>
 
-        {/* Card principal del wizard */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/60">
 
-          {/* ── Stepper visual (solo visible en pasos 1-5) ── */}
+          {/* Stepper */}
           {step <= 5 && (
             <div className="px-6 pt-6 pb-0">
               <div className="flex items-center gap-0">
@@ -166,10 +134,9 @@ export default function Booking() {
 
                   return (
                     <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                      {/* Círculo del paso */}
                       <button
                         onClick={() => isClickable && goToStep(s.id)}
-                        disabled={!isClickable}
+                        disabled={!isClickable || saving}
                         title={s.label}
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 transition-all ${
                           isCompleted
@@ -182,16 +149,12 @@ export default function Booking() {
                         {isCompleted ? '✓' : s.id}
                       </button>
 
-                      {/* Label (solo en pantallas medianas+) */}
-                      <span
-                        className={`hidden sm:block text-xs ml-1.5 font-medium transition-colors whitespace-nowrap ${
-                          isCurrent ? 'text-amber-400' : isCompleted ? 'text-zinc-300' : 'text-zinc-600'
-                        }`}
-                      >
+                      <span className={`hidden sm:block text-xs ml-1.5 font-medium transition-colors whitespace-nowrap ${
+                        isCurrent ? 'text-amber-400' : isCompleted ? 'text-zinc-300' : 'text-zinc-600'
+                      }`}>
                         {s.label}
                       </span>
 
-                      {/* Línea conectora */}
                       {idx < STEPS.length - 1 && (
                         <div className={`flex-1 h-px mx-2 transition-colors ${step > s.id ? 'bg-amber-500/50' : 'bg-zinc-800'}`} />
                       )}
@@ -202,42 +165,12 @@ export default function Booking() {
             </div>
           )}
 
-          {/* ── Contenido del paso activo ── */}
+          {/* Contenido del paso activo */}
           <div className="p-6 sm:p-8">
-            {step === 1 && (
-              <StepProfessional
-                selected={professional}
-                onSelect={handleSelectProfessional}
-              />
-            )}
-
-            {step === 2 && (
-              <StepService
-                selected={service}
-                professional={professional}
-                onSelect={handleSelectService}
-              />
-            )}
-
-            {step === 3 && (
-              <StepDate
-                selected={date}
-                professional={professional}
-                service={service}
-                onSelect={handleSelectDate}
-              />
-            )}
-
-            {step === 4 && (
-              <StepTime
-                selected={time}
-                professional={professional}
-                service={service}
-                date={date}
-                onSelect={handleSelectTime}
-              />
-            )}
-
+            {step === 1 && <StepProfessional selected={professional} onSelect={handleSelectProfessional} />}
+            {step === 2 && <StepService selected={service} professional={professional} onSelect={handleSelectService} />}
+            {step === 3 && <StepDate selected={date} professional={professional} service={service} onSelect={handleSelectDate} />}
+            {step === 4 && <StepTime selected={time} professional={professional} service={service} date={date} onSelect={handleSelectTime} />}
             {step === 5 && (
               <StepConfirm
                 professional={professional}
@@ -246,21 +179,16 @@ export default function Booking() {
                 time={time}
                 onConfirm={handleConfirm}
                 onBack={goBack}
+                saving={saving}
+                saveError={saveError}
               />
             )}
-
-            {step === 6 && (
-              <StepSuccess
-                appointment={confirmedAppointment}
-                onNewBooking={handleNewBooking}
-              />
-            )}
+            {step === 6 && <StepSuccess appointment={confirmedAppointment} onNewBooking={handleNewBooking} />}
           </div>
 
-          {/* ── Footer del wizard con botón Continuar (pasos 1–4) ── */}
+          {/* Footer del wizard */}
           {step >= 1 && step <= 4 && (
             <div className="px-6 sm:px-8 pb-6 sm:pb-8 flex items-center justify-between gap-4">
-              {/* Botón Volver */}
               <button
                 onClick={goBack}
                 disabled={step === 1}
@@ -268,19 +196,13 @@ export default function Booking() {
               >
                 ← Volver
               </button>
-
-              {/* Indicador de selección actual */}
-              <div className="text-xs text-zinc-600 text-center hidden sm:block">
+              <div className="text-xs text-zinc-600 hidden sm:block">
                 {step === 1 && 'Seleccioná un profesional para continuar'}
                 {step === 2 && 'Seleccioná un servicio para continuar'}
                 {step === 3 && 'Seleccioná una fecha para continuar'}
                 {step === 4 && 'Seleccioná un horario para continuar'}
               </div>
-
-              {/* Botón Continuar (si hay selección activa, avanza automáticamente) */}
-              <div className="text-xs text-zinc-600 text-right">
-                Paso {step} de {STEPS.length}
-              </div>
+              <div className="text-xs text-zinc-600">Paso {step} de {STEPS.length}</div>
             </div>
           )}
         </div>

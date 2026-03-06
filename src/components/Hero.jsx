@@ -18,7 +18,7 @@ export default function Hero() {
       <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent" />
 
       {/* Contenido */}
-      <div className="relative z-10 max-w-3xl mx-auto animate-slide-up">
+      <div className="relative z-10 max-w-3xl mx-auto animate-slide-up pt-20">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6 sm:mb-8">
           <span>💈</span>
@@ -82,13 +82,6 @@ export default function Hero() {
             <span>{BUSINESS_INFO.hours}</span>
           </div>
         </div>
-      </div>
-
-      {/* Flecha scroll */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <svg className="w-5 h-5 text-amber-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
       </div>
     </section>
   );

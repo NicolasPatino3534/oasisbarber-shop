@@ -15,7 +15,6 @@ export default function Navbar() {
   const navLinks = [
     { href: '#servicios', label: 'Servicios' },
     { href: '#equipo', label: 'Equipo' },
-    { href: '#reservar', label: 'Reservar' },
   ];
 
   return (
@@ -47,14 +46,6 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* CTA desktop */}
-        <a
-          href="#reservar"
-          className="hidden md:inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-5 py-2 rounded-full transition-colors"
-        >
-          Reservar Turno
-        </a>
-
         {/* Hamburger mobile */}
         <button
           onClick={() => setMenuOpen((o) => !o)}
@@ -84,15 +75,6 @@ export default function Navbar() {
                 </a>
               </li>
             ))}
-            <li>
-              <a
-                href="#reservar"
-                onClick={() => setMenuOpen(false)}
-                className="block w-full text-center bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-sm px-5 py-3 rounded-full transition-colors"
-              >
-                Reservar Turno
-              </a>
-            </li>
           </ul>
         </div>
       )}
