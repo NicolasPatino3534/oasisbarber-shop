@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Scissors } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/businessData.js';
 
-export default function Navbar() {
+export default function Navbar({ onOpenMyBookings }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -26,7 +27,7 @@ export default function Navbar() {
       <nav className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
         {/* Logo */}
         <a href="#top" className="flex items-center gap-2 group">
-          <span className="text-2xl">💈</span>
+          <Scissors className="w-6 h-6 text-amber-400 flex-shrink-0" />
           <span className="font-display text-lg font-bold tracking-wide text-white group-hover:text-amber-400 transition-colors">
             {BUSINESS_INFO.name}
           </span>
@@ -44,6 +45,14 @@ export default function Navbar() {
               </a>
             </li>
           ))}
+          <li>
+            <button
+              onClick={onOpenMyBookings}
+              className="text-sm font-semibold px-4 py-1.5 rounded-full border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-all"
+            >
+              Mis Turnos
+            </button>
+          </li>
         </ul>
 
         {/* Hamburger mobile */}
@@ -75,6 +84,14 @@ export default function Navbar() {
                 </a>
               </li>
             ))}
+            <li>
+              <button
+                onClick={() => { setMenuOpen(false); onOpenMyBookings(); }}
+                className="w-full text-left text-base font-semibold text-zinc-200 hover:text-white py-1 transition-colors"
+              >
+                Mis Turnos
+              </button>
+            </li>
           </ul>
         </div>
       )}

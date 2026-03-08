@@ -1,8 +1,6 @@
+import { User, Scissors, Calendar, Clock, Banknote, Check } from 'lucide-react';
 import { MONTH_LABELS, DAY_LABELS, BUSINESS_INFO } from '../../data/businessData.js';
 
-/**
- * Formatea 'YYYY-MM-DD' → "Martes, 10 de Marzo de 2025"
- */
 function formatDate(dateKey) {
   if (!dateKey) return '';
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -33,18 +31,26 @@ export default function StepSuccess({ appointment, onNewBooking }) {
   const endTime = `${String(h + 1).padStart(2, '0')}:00`;
   const whatsappUrl = buildWhatsAppUrl(appointment);
 
+  const items = [
+    { icon: <User     className="w-4 h-4" />, label: 'Profesional', value: appointment.professionalName },
+    { icon: <Scissors className="w-4 h-4" />, label: 'Servicio',    value: appointment.serviceName },
+    { icon: <Calendar className="w-4 h-4" />, label: 'Fecha',       value: formatDate(appointment.date) },
+    { icon: <Clock    className="w-4 h-4" />, label: 'Horario',     value: `${appointment.time} – ${endTime} hs` },
+    { icon: <Banknote className="w-4 h-4" />, label: 'Total',       value: `$${appointment.servicePrice}` },
+  ];
+
   return (
     <div className="step-enter flex flex-col items-center text-center py-4">
       {/* Icono de éxito */}
       <div className="relative mb-6">
-        <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-4xl">
-          ✓
+        <div className="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center">
+          <Check className="w-9 h-9 text-emerald-400" />
         </div>
         {/* Pulso animado */}
         <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping" />
       </div>
 
-      <h3 className="text-2xl font-black text-white mb-2">¡Turno Confirmado!</h3>
+      <h3 className="text-2xl font-black text-white mb-2">Turno Confirmado</h3>
       <p className="text-zinc-400 text-sm mb-8 max-w-xs">
         Hola <span className="text-white font-semibold">{appointment.clientName}</span>, tu reserva
         ha sido registrada exitosamente. ¡Te esperamos!
@@ -53,7 +59,7 @@ export default function StepSuccess({ appointment, onNewBooking }) {
       {/* Detalle de la reserva */}
       <div className="w-full bg-zinc-900 border border-zinc-700/60 rounded-2xl overflow-hidden mb-8">
         {/* Header tarjeta */}
-        <div className="bg-amber-500/10 border-b border-zinc-700/60 px-5 py-3 flex items-center gap-2">
+        <div className="bg-amber-500/10 border-b border-zinc-700/60 px-5 py-3">
           <span className="text-amber-400 font-bold text-sm uppercase tracking-wider">
             Detalle de tu turno
           </span>
@@ -61,15 +67,11 @@ export default function StepSuccess({ appointment, onNewBooking }) {
 
         {/* Items */}
         <div className="px-5 py-4 space-y-3">
-          {[
-            { icon: '👤', label: 'Profesional', value: appointment.professionalName },
-            { icon: appointment.serviceIcon || '✂️', label: 'Servicio', value: appointment.serviceName },
-            { icon: '📅', label: 'Fecha', value: formatDate(appointment.date) },
-            { icon: '🕐', label: 'Horario', value: `${appointment.time} – ${endTime} hs` },
-            { icon: '💵', label: 'Total', value: `$${appointment.servicePrice}` },
-          ].map((item) => (
+          {items.map((item) => (
             <div key={item.label} className="flex items-center gap-3 text-left">
-              <span className="inline-flex items-center justify-center w-6 text-base flex-shrink-0">{item.icon}</span>
+              <span className="inline-flex items-center justify-center w-6 text-zinc-400 flex-shrink-0">
+                {item.icon}
+              </span>
               <span className="text-xs text-zinc-500 uppercase tracking-wider w-20 flex-shrink-0">
                 {item.label}
               </span>

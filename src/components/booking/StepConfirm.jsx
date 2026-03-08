@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { User, Scissors, Calendar, Clock, AlertTriangle, Check } from 'lucide-react';
 import { MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
 
 function formatDate(dateKey) {
@@ -51,10 +52,10 @@ export default function StepConfirm({ professional, service, date, time, onConfi
   };
 
   const summaryItems = [
-    { label: 'Profesional', value: professional?.name, icon: '👤' },
-    { label: 'Servicio', value: `${service?.name}  ($${service?.price})`, icon: service?.icon },
-    { label: 'Fecha', value: formatDate(date), icon: '📅' },
-    { label: 'Horario', value: time ? `${time} – ${endTime} hs` : '', icon: '🕐' },
+    { label: 'Profesional', value: professional?.name,                          icon: <User      className="w-4 h-4" /> },
+    { label: 'Servicio',    value: `${service?.name}  ($${service?.price})`,    icon: <Scissors  className="w-4 h-4" /> },
+    { label: 'Fecha',       value: formatDate(date),                             icon: <Calendar  className="w-4 h-4" /> },
+    { label: 'Horario',     value: time ? `${time} – ${endTime} hs` : '',       icon: <Clock     className="w-4 h-4" /> },
   ];
 
   return (
@@ -68,7 +69,9 @@ export default function StepConfirm({ professional, service, date, time, onConfi
       <div className="bg-zinc-900 border border-zinc-700/60 rounded-2xl p-5 mb-6 space-y-3">
         {summaryItems.map((item) => (
           <div key={item.label} className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-7 text-lg flex-shrink-0">{item.icon}</span>
+            <span className="inline-flex items-center justify-center w-7 text-zinc-400 flex-shrink-0">
+              {item.icon}
+            </span>
             <div className="flex items-center gap-4">
               <span className="text-xs text-zinc-500 uppercase tracking-wider w-24 flex-shrink-0">
                 {item.label}
@@ -129,10 +132,10 @@ export default function StepConfirm({ professional, service, date, time, onConfi
         />
         {phoneError && <p className="text-red-400 text-xs mt-2">{phoneError}</p>}
 
-        {/* Error de Firestore (slot tomado en el último segundo, red caída, etc.) */}
+        {/* Error de Firestore */}
         {saveError && (
           <div className="mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2">
-            <span className="text-red-400 flex-shrink-0">⚠️</span>
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <p className="text-red-400 text-xs leading-relaxed">{saveError}</p>
           </div>
         )}
@@ -160,7 +163,10 @@ export default function StepConfirm({ professional, service, date, time, onConfi
                 Guardando en Firestore…
               </>
             ) : (
-              '✓ Confirmar Turno'
+              <>
+                <Check className="w-4 h-4" />
+                Confirmar Turno
+              </>
             )}
           </button>
         </div>

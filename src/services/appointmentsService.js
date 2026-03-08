@@ -153,3 +153,37 @@ export function subscribeToAllAppointments(onUpdate, onError) {
 export async function deleteAppointment(docId) {
   await deleteDoc(doc(db, COLLECTION, docId));
 }
+
+// ─── Cliente: buscar turnos por teléfono ──────────────────────────────────────
+
+/**
+ * Suscripción en tiempo real a los turnos de un cliente por su número de teléfono.
+ * Permite al cliente ver y cancelar sus propias reservas sin necesidad de cuenta.
+ *
+ * @param {string}   phone     - Número de teléfono exacto tal como fue ingresado
+ * @param {Function} onUpdate  - Callback con array de turnos del cliente
+ * @param {Function} onError   - Callback de error
+ * @returns {Function}         - Función de cleanup para useEffect
+ */
+export function searchAppointmentsByPhone(phone, onUpdate, onError) {
+  const q = query(
+    collection(db, COLLECTION),
+    where('clientPhone', '==', phone),
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const data = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          return a.time.localeCompare(b.time);
+        });
+      onUpdate(data);
+    },
+    (error) => {
+      console.error('[Firestore] Error buscando turnos por teléfono:', error);
+      onError?.(error);
+    },
+  );
+}

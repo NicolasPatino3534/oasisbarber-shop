@@ -1,3 +1,4 @@
+import { Calendar, AlertTriangle } from 'lucide-react';
 import { TIME_SLOTS } from '../../data/businessData.js';
 import { useBookedSlots } from '../../hooks/useAppointments.js';
 import { MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
@@ -25,7 +26,10 @@ export default function StepTime({ selected, professional, service, date, onSele
     return (
       <div className="step-enter">
         <h3 className="text-xl font-bold text-white mb-2">Elegí el horario</h3>
-        <p className="text-zinc-500 text-sm mb-6">📅 <span className="text-zinc-300">{formattedDate}</span></p>
+        <p className="text-zinc-500 text-sm mb-6 flex items-center gap-1.5">
+          <Calendar className="w-4 h-4 flex-shrink-0" />
+          <span className="text-zinc-300">{formattedDate}</span>
+        </p>
         <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="h-16 rounded-xl bg-zinc-800/60 border border-zinc-700/40 animate-pulse" />
@@ -39,7 +43,7 @@ export default function StepTime({ selected, professional, service, date, onSele
   if (error) {
     return (
       <div className="step-enter text-center py-6">
-        <p className="text-3xl mb-3">⚠️</p>
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3 mx-auto" />
         <p className="text-red-400 font-semibold mb-1">Error al cargar los horarios</p>
         <p className="text-zinc-500 text-sm">{error}</p>
       </div>
@@ -55,8 +59,9 @@ export default function StepTime({ selected, professional, service, date, onSele
         {' · '}
         <span className="text-amber-400 font-semibold">{service?.name}</span>
       </p>
-      <p className="text-zinc-500 text-sm mb-6">
-        📅 <span className="text-zinc-300">{formattedDate}</span>
+      <p className="text-zinc-500 text-sm mb-6 flex items-center gap-1.5">
+        <Calendar className="w-4 h-4 flex-shrink-0" />
+        <span className="text-zinc-300">{formattedDate}</span>
       </p>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">

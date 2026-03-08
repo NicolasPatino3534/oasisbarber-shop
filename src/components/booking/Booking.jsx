@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Check } from 'lucide-react';
 import { useCreateAppointment } from '../../hooks/useAppointments.js';
 import { BUSINESS_INFO, MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
 import StepProfessional from './StepProfessional.jsx';
@@ -172,7 +173,7 @@ export default function Booking() {
                             : 'bg-zinc-800 border border-zinc-700 text-zinc-600 cursor-default'
                         }`}
                       >
-                        {isCompleted ? '✓' : s.id}
+                        {isCompleted ? <Check className="w-4 h-4" /> : s.id}
                       </button>
 
                       <span className={`hidden sm:block text-xs ml-1.5 font-medium transition-colors whitespace-nowrap ${

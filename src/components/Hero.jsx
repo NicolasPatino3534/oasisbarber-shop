@@ -1,3 +1,4 @@
+import { Scissors, Calendar, MapPin, Clock } from 'lucide-react';
 import { BUSINESS_INFO } from '../data/businessData.js';
 
 export default function Hero() {
@@ -6,14 +7,14 @@ export default function Hero() {
       id="top"
       className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden"
     >
-      {/* Fondo con gradiente y patrón de barber pole */}
+      {/* Fondo con gradiente */}
       <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950" />
 
       {/* Círculos decorativos de fondo */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-600/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Línea decorativa vertical */}
+      {/* Líneas decorativas verticales */}
       <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent" />
       <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent" />
 
@@ -21,7 +22,7 @@ export default function Hero() {
       <div className="relative z-10 max-w-3xl mx-auto animate-slide-up pt-20">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6 sm:mb-8">
-          <span>💈</span>
+          <Scissors className="w-3.5 h-3.5 flex-shrink-0" />
           <span>Peluquería &amp; Barbería Premium</span>
         </div>
 
@@ -58,7 +59,7 @@ export default function Hero() {
             href="#reservar"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-base px-8 py-4 rounded-full transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:-translate-y-0.5"
           >
-            <span>📅</span>
+            <Calendar className="w-5 h-5 flex-shrink-0" />
             Reservar Turno Ahora
           </a>
           <a
@@ -72,13 +73,12 @@ export default function Hero() {
         {/* Info rápida */}
         <div className="mt-12 sm:mt-16 flex flex-col sm:flex-row gap-6 justify-center items-center text-sm text-zinc-500">
           <div className="flex items-center gap-2">
-            {/* Sin clase de color: los emojis en Windows no soportan recolorado CSS */}
-            <span>📍</span>
+            <MapPin className="w-4 h-4 flex-shrink-0" />
             <span>{BUSINESS_INFO.address}</span>
           </div>
           <div className="hidden sm:block w-px h-4 bg-zinc-700" />
           <div className="flex items-center gap-2">
-            <span>🕐</span>
+            <Clock className="w-4 h-4 flex-shrink-0" />
             <span>{BUSINESS_INFO.hours}</span>
           </div>
         </div>

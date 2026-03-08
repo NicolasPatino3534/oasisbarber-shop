@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Navbar from './components/Navbar.jsx';
 import Hero from './components/Hero.jsx';
 import Services from './components/Services.jsx';
@@ -5,6 +6,7 @@ import Team from './components/Team.jsx';
 import Booking from './components/booking/Booking.jsx';
 import Footer from './components/Footer.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import MyBookings from './components/MyBookings.jsx';
 
 // Enrutamiento minimalista sin dependencias externas:
 // /admin → panel de administración (autenticado con contraseña)
@@ -12,11 +14,13 @@ import AdminPanel from './components/AdminPanel.jsx';
 const isAdmin = window.location.pathname === '/admin';
 
 export default function App() {
+  const [showMyBookings, setShowMyBookings] = useState(false);
+
   if (isAdmin) return <AdminPanel />;
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      <Navbar />
+      <Navbar onOpenMyBookings={() => setShowMyBookings(true)} />
       <main>
         <Hero />
         <Services />
@@ -24,6 +28,7 @@ export default function App() {
         <Booking />
       </main>
       <Footer />
+      {showMyBookings && <MyBookings onClose={() => setShowMyBookings(false)} />}
     </div>
   );
 }
