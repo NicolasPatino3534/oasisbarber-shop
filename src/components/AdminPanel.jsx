@@ -442,7 +442,7 @@ function ServiciosTab() {
 
 const EMPTY_MEMBER = {
   nombre: '', rol: '', especialidad: '', bio: '',
-  avatar: '', color: 'from-amber-400 to-amber-600', activo: true,
+  color: 'from-amber-400 to-amber-600', activo: true,
 };
 
 function StaffTab() {
@@ -472,7 +472,6 @@ function StaffTab() {
       rol:          member.role         || '',
       especialidad: member.specialty    || '',
       bio:          member.bio          || '',
-      avatar:       member.avatar       || '',
       color:        member.color        || 'from-amber-400 to-amber-600',
       activo:       member.activo !== false,
     });
@@ -488,7 +487,7 @@ function StaffTab() {
       role:      form.rol.trim(),
       specialty: form.especialidad.trim(),
       bio:       form.bio.trim(),
-      avatar:    form.avatar.trim(),
+      avatar:    form.nombre.trim().charAt(0).toUpperCase(),
       color:     form.color,
       activo:    form.activo,
     };
@@ -555,17 +554,6 @@ function StaffTab() {
                 value={form.especialidad}
                 onChange={(e) => set('especialidad', e.target.value)}
                 placeholder="Ej: Degradados y diseños"
-                className={INPUT_CLS}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Avatar (iniciales)</label>
-              <input
-                type="text"
-                value={form.avatar}
-                onChange={(e) => set('avatar', e.target.value)}
-                placeholder="Ej: M"
-                maxLength={3}
                 className={INPUT_CLS}
               />
             </div>
