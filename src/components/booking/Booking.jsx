@@ -1,35 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Check } from 'lucide-react';
 import { useCreateAppointment } from '../../hooks/useAppointments.js';
-import { BUSINESS_INFO, MONTH_LABELS, DAY_LABELS } from '../../data/businessData.js';
 import StepProfessional from './StepProfessional.jsx';
 import StepService from './StepService.jsx';
 import StepDate from './StepDate.jsx';
 import StepTime from './StepTime.jsx';
 import StepConfirm from './StepConfirm.jsx';
 import StepSuccess from './StepSuccess.jsx';
-
-// ─── WhatsApp ─────────────────────────────────────────────────────────────────
-
-function formatDateForWA(dateKey) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return `${DAY_LABELS[date.getUTCDay()]}, ${d} de ${MONTH_LABELS[m - 1]} de ${y}`;
-}
-
-function buildWhatsAppUrl(appointment) {
-  const { clientName, professionalName, serviceName, date, time } = appointment;
-  const msg =
-    `¡Hola! Soy ${clientName} y acabo de reservar un turno en Oasis Hair & Beard 💈\n\n` +
-    `👤 Profesional: ${professionalName}\n` +
-    `✂️ Servicio: ${serviceName}\n` +
-    `📅 Fecha: ${formatDateForWA(date)}\n` +
-    `🕐 Horario: ${time} hs\n\n` +
-    `¡Hasta pronto!`;
-  return `https://wa.me/${BUSINESS_INFO.whatsappPhone}?text=${encodeURIComponent(msg)}`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 const STEPS = [
   { id: 1, label: 'Profesional' },
@@ -112,9 +89,6 @@ export default function Booking() {
         // saveError ya está seteado en el hook → StepConfirm lo muestra
         return;
       }
-
-      // Redirigir al WhatsApp del negocio con el resumen del turno
-      window.open(buildWhatsAppUrl(result.appointment), '_blank', 'noopener,noreferrer');
 
       setState((s) => ({ ...s, confirmedAppointment: result.appointment, step: 6 }));
     },

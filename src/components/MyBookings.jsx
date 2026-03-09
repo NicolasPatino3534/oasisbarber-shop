@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, ClipboardList, Search, User, Clock, Calendar, X, Scissors } from 'lucide-react';
-import { searchAppointmentsByPhone, deleteAppointment } from '../services/appointmentsService.js';
-import { MONTH_LABELS, DAY_LABELS } from '../data/businessData.js';
+import { searchAppointmentsByPhone } from '../services/appointmentsService.js';
+import { MONTH_LABELS, DAY_LABELS, BUSINESS_INFO } from '../data/businessData.js';
 
 function formatDate(dateKey) {
   if (!dateKey) return '';
@@ -10,13 +10,17 @@ function formatDate(dateKey) {
   return `${DAY_LABELS[date.getUTCDay()]}, ${d} de ${MONTH_LABELS[m - 1]} de ${y}`;
 }
 
+function buildCancelWhatsAppUrl(apt) {
+  const msg = `Hola, necesito cancelar mi turno de ${apt.serviceName} con ${apt.professionalName} para el ${formatDate(apt.date)} a las ${apt.time} hs.`;
+  return `https://wa.me/${BUSINESS_INFO.whatsappPhone}?text=${encodeURIComponent(msg)}`;
+}
+
 export default function MyBookings({ onClose }) {
   const [phone, setPhone] = useState('');
   const [searched, setSearched] = useState(false);
   const [searching, setSearching] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [error, setError] = useState(null);
-  const [cancellingId, setCancellingId] = useState(null);
   const unsubRef = useRef(null);
 
   // Limpieza del listener al desmontar el modal
@@ -61,22 +65,6 @@ export default function MyBookings({ onClose }) {
         setSearched(true);
       },
     );
-  };
-
-  const handleCancel = async (apt) => {
-    const ok = window.confirm(
-      `¿Cancelar el turno del ${formatDate(apt.date)} a las ${apt.time} hs con ${apt.professionalName}?\n\nEsta acción no se puede deshacer.`,
-    );
-    if (!ok) return;
-
-    setCancellingId(apt.id);
-    try {
-      await deleteAppointment(apt.id);
-    } catch {
-      alert('No se pudo cancelar el turno. Intentá de nuevo.');
-    } finally {
-      setCancellingId(null);
-    }
   };
 
   return (
@@ -175,8 +163,6 @@ export default function MyBookings({ onClose }) {
               {appointments.map((apt) => {
                 const [h] = apt.time.split(':').map(Number);
                 const endTime = `${String(h + 1).padStart(2, '0')}:00`;
-                const isCancelling = cancellingId === apt.id;
-
                 return (
                   <div
                     key={apt.id}
@@ -213,27 +199,19 @@ export default function MyBookings({ onClose }) {
                       </div>
                     </div>
 
-                    {/* Botón cancelar */}
-                    <button
-                      onClick={() => handleCancel(apt)}
-                      disabled={isCancelling}
-                      className="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 text-red-400 hover:text-red-300 text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    {/* Boton cancelar via WhatsApp */}
+                    <a
+                      href={buildCancelWhatsAppUrl(apt)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-600/30 hover:border-emerald-600/50 text-emerald-400 hover:text-emerald-300 text-sm font-semibold transition-all flex items-center justify-center gap-2"
                     >
-                      {isCancelling ? (
-                        <>
-                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                          </svg>
-                          Cancelando...
-                        </>
-                      ) : (
-                        <>
-                          <X className="w-3.5 h-3.5" />
-                          Cancelar turno
-                        </>
-                      )}
-                    </button>
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 flex-shrink-0">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.553 4.116 1.52 5.847L.057 23.571a.75.75 0 00.908.94l5.944-1.559A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.98 0-3.831-.538-5.417-1.476l-.388-.232-4.02 1.054 1.022-3.93-.253-.403A9.944 9.944 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+                      </svg>
+                      Solicitar cancelación por WhatsApp
+                    </a>
                   </div>
                 );
               })}
