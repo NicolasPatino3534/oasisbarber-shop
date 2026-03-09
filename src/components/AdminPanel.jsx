@@ -8,12 +8,10 @@ import {
   deleteDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { db } from '../firebase.js';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { db, auth } from '../firebase.js';
 import { subscribeToAllAppointments, deleteAppointment } from '../services/appointmentsService.js';
 import { MONTH_LABELS, DAY_LABELS } from '../data/businessData.js';
-
-// ─── Contraseña ───────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'oasis2024';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +20,12 @@ function formatDate(dateKey) {
   const [y, m, d] = dateKey.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   return `${DAY_LABELS[date.getUTCDay()]} ${d}/${m}/${y}`;
+}
+
+function getDateKey(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 const INPUT_CLS =
@@ -38,17 +42,26 @@ const GRADIENT_OPTIONS = [
 
 // ─── LoginScreen ──────────────────────────────────────────────────────────────
 
-function LoginScreen({ onLogin }) {
+function LoginScreen() {
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      onLogin();
-    } else {
-      setError('Contraseña incorrecta.');
-      setPassword('');
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+      const msg =
+        err.code === 'auth/too-many-requests'
+          ? 'Demasiados intentos. Esperá unos minutos.'
+          : 'Email o contraseña incorrectos.';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,24 +74,41 @@ function LoginScreen({ onLogin }) {
           <p className="text-zinc-500 text-sm mt-1">Oasis Hair &amp; Beard</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl shadow-black/60">
-          <label className="block mb-1.5">
-            <span className="text-sm font-medium text-zinc-300">Contraseña</span>
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); setError(''); }}
-            placeholder="••••••••"
-            autoFocus
-            className={`${INPUT_CLS} ${error ? 'border-red-500/60 focus:ring-red-500/30' : ''}`}
-          />
-          {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+        <form onSubmit={handleSubmit} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl shadow-black/60 space-y-4">
+          <div>
+            <label className="block mb-1.5">
+              <span className="text-sm font-medium text-zinc-300">Email</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              placeholder="admin@oasis.com"
+              autoFocus
+              required
+              className={`${INPUT_CLS} ${error ? 'border-red-500/60 focus:ring-red-500/30' : ''}`}
+            />
+          </div>
+          <div>
+            <label className="block mb-1.5">
+              <span className="text-sm font-medium text-zinc-300">Contraseña</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              placeholder="••••••••"
+              required
+              className={`${INPUT_CLS} ${error ? 'border-red-500/60 focus:ring-red-500/30' : ''}`}
+            />
+          </div>
+          {error && <p className="text-red-400 text-xs">{error}</p>}
           <button
             type="submit"
-            className="w-full mt-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-sm transition-all shadow-lg shadow-amber-500/20"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-sm transition-all shadow-lg shadow-amber-500/20 disabled:opacity-60"
           >
-            Ingresar
+            {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
 
@@ -147,6 +177,46 @@ function AdminTable({ appointments, onDelete }) {
   );
 }
 
+// ─── DaySection (Hoy / Mañana) ────────────────────────────────────────────────
+
+function DaySection({ title, appointments, onDelete, emptyMsg }) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider">{title}</h3>
+        <span className="text-xs text-zinc-500">
+          {appointments.length} turno{appointments.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      {appointments.length === 0 ? (
+        <p className="text-zinc-600 text-sm text-center py-6">{emptyMsg || 'Sin turnos'}</p>
+      ) : (
+        <div className="divide-y divide-zinc-800/60">
+          {appointments.map((apt) => (
+            <div key={apt.id} className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+              <span className="text-amber-400 font-black text-base font-mono w-12 flex-shrink-0">{apt.time}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{apt.clientName}</p>
+                <p className="text-zinc-500 text-xs truncate">{apt.professionalName} · {apt.serviceName}</p>
+              </div>
+              {apt.clientPhone && (
+                <span className="text-zinc-500 text-xs flex-shrink-0 hidden sm:block">{apt.clientPhone}</span>
+              )}
+              <span className="text-amber-400 font-bold text-sm flex-shrink-0">${apt.servicePrice}</span>
+              <button
+                onClick={() => onDelete(apt)}
+                className="text-xs font-semibold text-zinc-600 hover:text-red-400 border border-zinc-800 hover:border-red-500/40 rounded-lg px-2.5 py-1 transition-all flex-shrink-0"
+              >
+                Eliminar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── TurnosTab ────────────────────────────────────────────────────────────────
 
 function TurnosTab() {
@@ -170,6 +240,12 @@ function TurnosTab() {
     catch { alert('Error al eliminar el turno. Intentá de nuevo.'); }
   };
 
+  const todayKey    = getDateKey(0);
+  const tomorrowKey = getDateKey(1);
+  const todayApts    = appointments.filter((a) => a.date === todayKey);
+  const tomorrowApts = appointments.filter((a) => a.date === tomorrowKey);
+  const otherApts    = appointments.filter((a) => a.date !== todayKey && a.date !== tomorrowKey);
+
   return (
     <>
       {/* Stats rápidas */}
@@ -190,10 +266,6 @@ function TurnosTab() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-white">Turnos reservados</h2>
-      </div>
-
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -210,7 +282,33 @@ function TurnosTab() {
       )}
 
       {!loading && !listenError && (
-        <AdminTable appointments={appointments} onDelete={handleDelete} />
+        <>
+          {/* Hoy y Mañana */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <DaySection
+              title="Hoy"
+              appointments={todayApts}
+              onDelete={handleDelete}
+              emptyMsg="Sin turnos para hoy"
+            />
+            <DaySection
+              title="Mañana"
+              appointments={tomorrowApts}
+              onDelete={handleDelete}
+              emptyMsg="Sin turnos para mañana"
+            />
+          </div>
+
+          {/* Resto de turnos */}
+          {otherApts.length > 0 && (
+            <>
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-white">Otros turnos</h2>
+              </div>
+              <AdminTable appointments={otherApts} onDelete={handleDelete} />
+            </>
+          )}
+        </>
       )}
     </>
   );
@@ -698,11 +796,24 @@ const TABS = [
 ];
 
 export default function AdminPanel() {
-  const [authenticated, setAuthenticated] = useState(false);
+  const [user, setUser]         = useState(undefined); // undefined = checking, null = not logged in
   const [activeTab, setActiveTab] = useState('turnos');
 
-  if (!authenticated) {
-    return <LoginScreen onLogin={() => setAuthenticated(true)} />;
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u ?? null));
+    return () => unsub();
+  }, []);
+
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
   }
 
   return (
@@ -716,12 +827,20 @@ export default function AdminPanel() {
             <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">Panel de Administración</p>
           </div>
         </div>
-        <a
-          href="/"
-          className="text-sm text-zinc-400 hover:text-amber-400 font-medium transition-colors border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5"
-        >
-          ← Sitio público
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            className="text-sm text-zinc-400 hover:text-amber-400 font-medium transition-colors border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5"
+          >
+            ← Sitio público
+          </a>
+          <button
+            onClick={() => signOut(auth)}
+            className="text-sm text-zinc-400 hover:text-red-400 font-medium transition-colors border border-zinc-800 hover:border-red-500/40 rounded-lg px-3 py-1.5"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       {/* Tabs */}

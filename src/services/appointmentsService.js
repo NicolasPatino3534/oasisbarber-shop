@@ -63,8 +63,11 @@ export function subscribeToBookedSlots(professionalId, date, onUpdate, onError) 
   return onSnapshot(
     q,
     (snapshot) => {
-      const bookedSet = new Set(snapshot.docs.map((d) => d.data().time));
-      onUpdate(bookedSet);
+      const booked = snapshot.docs.map((d) => ({
+        time:     d.data().time,
+        duration: d.data().serviceDuration || 60,
+      }));
+      onUpdate(booked);
     },
     (error) => {
       console.error('[Firestore] Error en listener de horarios:', error);
@@ -125,8 +128,17 @@ export async function createAppointment(data) {
  * @returns {Function}         - Función de cleanup para useEffect
  */
 export function subscribeToAllAppointments(onUpdate, onError) {
-  return onSnapshot(
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffKey = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+
+  const q = query(
     collection(db, COLLECTION),
+    where('date', '>=', cutoffKey),
+  );
+
+  return onSnapshot(
+    q,
     (snapshot) => {
       const data = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() }))

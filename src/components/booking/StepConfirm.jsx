@@ -21,9 +21,13 @@ export default function StepConfirm({ professional, service, date, time, onConfi
   const [validationError, setValidationError] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [phoneConfirm, setPhoneConfirm] = useState('');
+  const [phoneConfirmError, setPhoneConfirmError] = useState('');
 
-  const [h] = time ? time.split(':').map(Number) : [0];
-  const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+  const [h, startM] = time ? time.split(':').map(Number) : [0, 0];
+  const durationMins = service?.duration || 60;
+  const endMins = h * 60 + (startM || 0) + durationMins;
+  const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -46,8 +50,13 @@ export default function StepConfirm({ professional, service, date, time, onConfi
       setPhoneError('Ingresá un número de teléfono válido.');
       return;
     }
+    if (phoneConfirm.trim() !== trimmedPhone) {
+      setPhoneConfirmError('Los números de teléfono no coinciden.');
+      return;
+    }
     setValidationError('');
     setPhoneError('');
+    setPhoneConfirmError('');
     onConfirm(trimmed, trimmedPhone);
   };
 
@@ -131,6 +140,28 @@ export default function StepConfirm({ professional, service, date, time, onConfi
           }`}
         />
         {phoneError && <p className="text-red-400 text-xs mt-2">{phoneError}</p>}
+
+        {/* Confirmación de teléfono */}
+        <label className="block mt-4 mb-1.5">
+          <span className="text-sm font-medium text-zinc-300">Confirmá tu teléfono</span>
+        </label>
+        <input
+          type="tel"
+          value={phoneConfirm}
+          onChange={(e) => {
+            setPhoneConfirm(e.target.value);
+            if (phoneConfirmError) setPhoneConfirmError('');
+          }}
+          placeholder="Repetí el número para confirmar"
+          maxLength={25}
+          disabled={saving}
+          className={`w-full bg-zinc-800 border rounded-xl px-4 py-3 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 transition-all disabled:opacity-60 ${
+            phoneConfirmError
+              ? 'border-red-500/60 focus:ring-red-500/30'
+              : 'border-zinc-700 focus:ring-amber-500/40 focus:border-amber-500/60'
+          }`}
+        />
+        {phoneConfirmError && <p className="text-red-400 text-xs mt-2">{phoneConfirmError}</p>}
 
         {/* Error de Firestore */}
         {saveError && (

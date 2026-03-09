@@ -27,8 +27,10 @@ function buildWhatsAppUrl(appointment) {
 export default function StepSuccess({ appointment, onNewBooking }) {
   if (!appointment) return null;
 
-  const [h] = appointment.time.split(':').map(Number);
-  const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+  const [h, startM] = appointment.time.split(':').map(Number);
+  const durationMins = appointment.serviceDuration || 60;
+  const endMins = h * 60 + (startM || 0) + durationMins;
+  const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
   const whatsappUrl = buildWhatsAppUrl(appointment);
 
   const items = [
@@ -72,10 +74,12 @@ export default function StepSuccess({ appointment, onNewBooking }) {
               <span className="inline-flex items-center justify-center w-6 text-zinc-400 flex-shrink-0">
                 {item.icon}
               </span>
-              <span className="text-xs text-zinc-500 uppercase tracking-wider w-20 flex-shrink-0">
-                {item.label}
-              </span>
-              <span className="text-white font-semibold text-sm">{item.value}</span>
+              <div className="flex items-center gap-4 flex-1">
+                <span className="text-xs text-zinc-500 uppercase tracking-wider w-24 flex-shrink-0">
+                  {item.label}
+                </span>
+                <span className="text-white font-semibold text-sm">{item.value}</span>
+              </div>
             </div>
           ))}
         </div>

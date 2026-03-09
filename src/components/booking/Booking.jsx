@@ -96,6 +96,7 @@ export default function Booking() {
         serviceId:        service.id,
         serviceName:      service.name,
         servicePrice:     service.price,
+        serviceDuration:  service.duration,
         serviceIcon:      service.icon,
         date,
         time,

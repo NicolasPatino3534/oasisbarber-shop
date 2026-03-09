@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // ─── Configuración de Firebase ────────────────────────────────────────────────
 // Los valores se leen desde el archivo .env (Vite expone solo las variables
@@ -20,5 +21,5 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Instancia de Firestore — la importan todos los servicios
-export const db = getFirestore(app);
+export const db   = getFirestore(app);
+export const auth = getAuth(app);

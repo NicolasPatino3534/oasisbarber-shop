@@ -5,7 +5,7 @@ export default function Hero() {
   return (
     <section
       id="top"
-      className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden"
+      className="relative min-h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden pb-20"
     >
       {/* Fondo con gradiente */}
       <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950" />

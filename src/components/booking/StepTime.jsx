@@ -18,7 +18,7 @@ function formatDate(dateKey) {
  * el slot se bloquea en la UI automáticamente sin recargar la página.
  */
 export default function StepTime({ selected, professional, service, date, onSelect }) {
-  const { bookedSlots, loading, error } = useBookedSlots(professional?.id, date);
+  const { bookedSlots, loading, error } = useBookedSlots(professional?.id, date, service?.duration ?? 60);
 
   const formattedDate = formatDate(date);
 
@@ -68,8 +68,10 @@ export default function StepTime({ selected, professional, service, date, onSele
         {TIME_SLOTS.map((slot) => {
           const isTaken = bookedSlots.has(slot);
           const isSelected = selected === slot;
-          const [h] = slot.split(':').map(Number);
-          const endTime = `${String(h + 1).padStart(2, '0')}:00`;
+          const [h, startM] = slot.split(':').map(Number);
+          const durationMins = service?.duration || 60;
+          const endMins = h * 60 + (startM || 0) + durationMins;
+          const endTime = `${String(Math.floor(endMins / 60)).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`;
 
           return (
             <button

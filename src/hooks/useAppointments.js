@@ -10,6 +10,12 @@ import {
   subscribeToBookedSlots,
   createAppointment,
 } from '../services/appointmentsService.js';
+import { TIME_SLOTS } from '../data/businessData.js';
+
+function toMins(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook 1: Suscripción en tiempo real a los slots ocupados
@@ -26,15 +32,15 @@ import {
  * @param {string|null} date - Formato 'YYYY-MM-DD'
  * @returns {{ bookedSlots: Set<string>, loading: boolean, error: string|null }}
  */
-export function useBookedSlots(professionalId, date) {
-  const [bookedSlots, setBookedSlots] = useState(new Set());
+export function useBookedSlots(professionalId, date, serviceDuration = 60) {
+  const [bookedAppointments, setBookedAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     // Si no hay profesional o fecha todavía, no hacemos nada
     if (!professionalId || !date) {
-      setBookedSlots(new Set());
+      setBookedAppointments([]);
       setLoading(false);
       return;
     }
@@ -46,8 +52,8 @@ export function useBookedSlots(professionalId, date) {
     const unsubscribe = subscribeToBookedSlots(
       professionalId,
       date,
-      (slots) => {
-        setBookedSlots(slots);
+      (appointments) => {
+        setBookedAppointments(appointments);
         setLoading(false);
       },
       () => {
@@ -60,6 +66,23 @@ export function useBookedSlots(professionalId, date) {
     // o cuando professionalId/date cambian → cancela el listener anterior
     return () => unsubscribe();
   }, [professionalId, date]);
+
+  // Calcula el set de slots bloqueados considerando la duración real de cada turno
+  // y la duración del servicio que el cliente quiere reservar.
+  const bookedSlots = new Set();
+  bookedAppointments.forEach(({ time: bTime, duration: bDur }) => {
+    const bStart = toMins(bTime);
+    const bEnd   = bStart + bDur;
+    TIME_SLOTS.forEach((slot) => {
+      const sStart = toMins(slot);
+      const sEnd   = sStart + serviceDuration;
+      // Bloqueado si: el turno reservado ocupa este slot, O si reservar aquí
+      // con la duración del servicio elegido colisionaría con el turno reservado.
+      if ((sStart >= bStart && sStart < bEnd) || (sStart < bStart && sEnd > bStart)) {
+        bookedSlots.add(slot);
+      }
+    });
+  });
 
   return { bookedSlots, loading, error };
 }
